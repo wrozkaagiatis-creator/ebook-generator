@@ -1,4 +1,3 @@
-import { PDFDocument, rgb } from 'pdf-lib';
 import fetch from 'node-fetch';
 
 export default async function handler(req, res) {
@@ -20,14 +19,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { name, email } = req.body;
-
-    if (!name) {
-      return res.status(400).json({ error: 'Brak imienia użytkownika' });
-    }
-
     const fileId = '1DKmahSlZaQw26WM8jf4yc9oewIp7pwBK';
-    
     let pdfUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
     let response = await fetch(pdfUrl);
 
@@ -48,30 +40,15 @@ export default async function handler(req, res) {
 
     const pdfBytes = await response.arrayBuffer();
 
-    const pdfDoc = await PDFDocument.load(pdfBytes);
-    const pages = pdfDoc.getPages();
-    const firstPage = pages[0];
-
-    const watermarkText = `Egzemplarz spersonalizowany dla: ${name}${email ? ` (${email})` : ''}`;
-    
-    firstPage.drawText(watermarkText, {
-      x: 40,
-      y: 20,
-      size: 9,
-      color: rgb(0.4, 0.4, 0.4),
-    });
-
-    const modifiedPdfBytes = await pdfDoc.save();
-
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader(
       'Content-Disposition',
       `attachment; filename="Ebook-Tarocistki-Agiatis.pdf"`
     );
-    return res.send(Buffer.from(modifiedPdfBytes));
+    return res.send(Buffer.from(pdfBytes));
 
   } catch (error) {
-    console.error('Błąd generowania:', error);
-    return res.status(500).json({ error: 'Wystąpił błąd podczas generowania pliku.' });
+    console.error('Błąd pobierania:', error);
+    return res.status(500).json({ error: 'Wystąpił błąd podczas pobierania pliku.' });
   }
 }
