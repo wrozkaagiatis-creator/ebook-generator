@@ -2,7 +2,8 @@ import { PDFDocument, rgb } from 'pdf-lib';
 import fetch from 'node-fetch';
 
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Credentials', true);
+  // Pełne nagłówki CORS zezwalające na zapytanie z dowolnej strony (w tym Webnode)
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
   res.setHeader(
