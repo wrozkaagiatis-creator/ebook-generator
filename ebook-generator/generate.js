@@ -1,3 +1,4 @@
+import { PDFDocument, rgb } from 'pdf-lib';
 import fetch from 'node-fetch';
 
 export default async function handler(req, res) {
@@ -25,17 +26,52 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Brak imienia użytkownika' });
     }
 
-    const fileId = '1PnC_eDERRjwbV74M0OCS9UcpuYVbTOTy';
-    const directDownloadUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
+    const fileId = '1DKmahSlZaQw26WM8jf4yc9oewIp7pwBK';
+    
+    let pdfUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
+    let response = await fetch(pdfUrl);
 
-    return res.status(200).json({ 
-      success: true, 
-      downloadUrl: directDownloadUrl,
-      message: 'Pobieranie rozpoczęte' 
+    const setCookie = response.headers.get('set-cookie');
+    if (setCookie) {
+      const confirmCode = setCookie.match(/download_warning[^\=]*\=([^;]+)/);
+      if (confirmCode) {
+        pdfUrl += `&confirm=${confirmCode[1]}`;
+        response = await fetch(pdfUrl, {
+          headers: { Cookie: setCookie }
+        });
+      }
+    }
+
+    if (!response.ok) {
+      throw new Error('Nie udało się pobrać pliku z Dysku Google.');
+    }
+
+    const pdfBytes = await response.arrayBuffer();
+
+    const pdfDoc = await PDFDocument.load(pdfBytes);
+    const pages = pdfDoc.getPages();
+    const firstPage = pages[0];
+
+    const watermarkText = `Egzemplarz spersonalizowany dla: ${name}${email ? ` (${email})` : ''}`;
+    
+    firstPage.drawText(watermarkText, {
+      x: 40,
+      y: 20,
+      size: 9,
+      color: rgb(0.4, 0.4, 0.4),
     });
 
+    const modifiedPdfBytes = await pdfDoc.save();
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="Ebook-Tarocistki-Agiatis.pdf"`
+    );
+    return res.send(Buffer.from(modifiedPdfBytes));
+
   } catch (error) {
-    console.error('Błąd:', error);
-    return res.status(500).json({ error: 'Wystąpił błąd serwera.' });
+    console.error('Błąd generowania:', error);
+    return res.status(500).json({ error: 'Wystąpił błąd podczas generowania pliku.' });
   }
 }
